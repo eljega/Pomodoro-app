@@ -4,8 +4,6 @@ import threading
 import time
 from playsound import playsound
 
-
-
 is_timer_running = False
 
 class PomodoroApp:
@@ -19,6 +17,19 @@ class PomodoroApp:
         self.status_label = ft.Text(value="", size=20)
         self.start_button = ft.ElevatedButton("Iniciar", on_click=self.on_start_button_click)
         self.alarm_triggered = False
+        self.alarms_view = ft.Column()
+
+        self.alarm_title_input = ft.TextField(label="Título de la Alarma", width=300)
+            # Crear las opciones para el Dropdown de hora
+        hour_options = [ft.dropdown.Option(f"{i:02d}") for i in range(24)]
+        self.alarm_hour_input = ft.Dropdown(options=hour_options, label="Hora de inicio", width=100)
+        # Crear las opciones para el Dropdown de minutos
+        minute_options = [ft.dropdown.Option(f"{i:02d}") for i in range(60)]
+        self.alarm_minute_input = ft.Dropdown(options=minute_options, label="Minutos de inicio", width=100)
+        # Similar para alarm_end_hour_input y alarm_end_minute_input
+        self.alarm_end_hour_input = ft.Dropdown(options=hour_options, label="Hora de finalización", width=100)
+        self.alarm_end_minute_input = ft.Dropdown(options=minute_options, label="Minutos de finalización", width=100)
+        self.add_alarm_button = ft.ElevatedButton("Agregar Alarma", on_click=self.on_add_alarm_button_click)
 
 
     def play_sound(self, file_path):
@@ -45,21 +56,15 @@ class PomodoroApp:
 
     is_timer_running = False
 
-    def add_alarm(self, title, start_time_str, end_time_str):
-        start_time = datetime.strptime(start_time_str, '%H:%M')
-        end_time = datetime.strptime(end_time_str, '%H:%M')
-        self.alarms.append((title, start_time, end_time))
-        self.display_alarms()  # Actualizar la lista de alarmas en la UI
 
     def display_alarms(self):
-        # Función para mostrar las alarmas programadas en la UI
-        alarms_view = ft.Column()
-        for title, start, end, _ in self.alarms:  # Añadido un cuarto elemento en la tupla para la duración
-            alarms_view.controls.append(ft.Text(value=f"{title}: {start.strftime('%H:%M')} - {end.strftime('%H:%M')}"))
-        self.page.add(alarms_view)
-        self.page.update()
+        # Limpia los controles actuales para evitar duplicados
+        self.alarms_view.controls.clear()
 
+        for title, start, end, _ in self.alarms:
+            self.alarms_view.controls.append(ft.Text(value=f"{title}: {start.strftime('%H:%M')} - {end.strftime('%H:%M')}"))
 
+        self.page.update()  # Esto actualizará la página con los controles recién modificados
 
     def pomodoro_timer(self, task_name, duration, timer_label, status_label, start_button):
         print(f"Iniciando Pomodoro para '{task_name}' con duración de {duration} horas.")
@@ -97,6 +102,7 @@ class PomodoroApp:
         self.is_timer_running = False
         start_button.enabled = True
         start_button.update()
+        self.alarm_triggered = False
 
 
         # En tu función que maneja el evento del botón de inicio
@@ -113,13 +119,17 @@ class PomodoroApp:
 
     def check_alarms(self):
         while True:
-            now = datetime.now()
+            now = datetime.now().time()  # Obtener la hora actual como un objeto time
             for title, start, end, duration in self.alarms:
-                if start.time() <= now.time() < end.time() and not self.alarm_triggered:
-                    self.alarm_triggered = True
-                    print(f"Alarma programada para '{title}' debería activarse ahora.")
-                    self.start_pomodoro(title, duration, self.timer_label, self.status_label, self.start_button)
-            time.sleep(30)  # Verificar las alarmas cada 30 segundos
+                # Comparar directamente los objetos time
+                if start <= now < end and not self.alarm_triggered:
+                    # Activar alarma solo si `is_timer_running` es False para evitar solapamientos
+                    if not self.is_timer_running:
+                        self.alarm_triggered = True
+                        self.start_pomodoro(title, duration, self.timer_label, self.status_label, self.start_button)
+            time.sleep(30)
+
+
 
     
     def start_pomodoro(self, task_name, task_duration, timer_label, status_label, start_button):
@@ -136,39 +146,69 @@ class PomodoroApp:
 
 
     def add_alarm(self, title, start_time_str, end_time_str):
-        start_time = datetime.strptime(start_time_str, '%H:%M')
-        end_time = datetime.strptime(end_time_str, '%H:%M')
+        now = datetime.now().time()  # Obtener solo la hora actual
+        start_time = datetime.strptime(start_time_str, '%H:%M').time()  # Convertir a objeto time
+        end_time = datetime.strptime(end_time_str, '%H:%M').time()  # Convertir a objeto time
 
-        # Calcular la duración en horas
-        duration = (end_time - start_time).total_seconds() / 3600
+        # Validar que la hora de inicio no haya pasado ya
+        if start_time < now:
+            print("Error: La hora de inicio ya pasó.")
+            return
+
+        for alarm in self.alarms:
+            _, existing_start, existing_end, _ = alarm
+            if start_time == existing_start:
+                print("Error: Ya existe una alarma con la misma hora de inicio.")
+                return
+
+        if end_time <= start_time:
+            print("Error: La hora de finalización debe ser después de la hora de inicio.")
+            return
+
+        # Calcular la duración en horas de forma manual
+        start_minutes = start_time.hour * 60 + start_time.minute
+        end_minutes = end_time.hour * 60 + end_time.minute
+        duration_hours = (end_minutes - start_minutes) / 60.0
 
         # Verificar si la nueva alarma se solapa con alguna existente
-        for _, existing_start, existing_end in self.alarms:
+        for _, existing_start, existing_end, _ in self.alarms:
             if not (end_time <= existing_start or start_time >= existing_end):
                 print("Error: La alarma se solapa con otra existente.")
-                return  # No agregar la alarma
+                return
 
-        self.alarms.append((title, start_time, end_time, duration))
+        self.alarms.append((title, start_time, end_time, duration_hours))
         self.display_alarms()
 
 
+    def on_add_alarm_button_click(self, event):
+            # Obtener los valores de los controles de entrada de la alarma
+            title = self.alarm_title_input.value
+            start_time_str = f"{self.alarm_hour_input.value}:{self.alarm_minute_input.value}"
+            end_time_str = f"{self.alarm_end_hour_input.value}:{self.alarm_end_minute_input.value}"
+
+            # Llamar a la función add_alarm con los valores obtenidos
+            self.add_alarm(title, start_time_str, end_time_str)
 
     def run(self):
-        alarm_title_input = ft.TextField(label="Título de la Alarma", width=300)
-        alarm_start_input = ft.TextField(label="Hora de Inicio (HH:MM)", width=300)
-        alarm_end_input = ft.TextField(label="Hora de Finalización (HH:MM)", width=300)
-        add_alarm_button = ft.ElevatedButton("Agregar Alarma", on_click=lambda e: self.add_alarm(alarm_title_input.value, alarm_start_input.value, alarm_end_input.value))
-
-        self.page.add(self.task_name_input, self.task_duration_input, self.start_button, self.timer_label, self.status_label, alarm_title_input, alarm_start_input, alarm_end_input, add_alarm_button)
-
+        # No necesitamos redefinir los controles aquí porque ya los definimos en __init__
+        self.page.add(
+        self.task_name_input,
+        self.task_duration_input,
+        self.start_button,
+        self.timer_label,
+        self.status_label,
+        self.alarm_title_input,
+        self.alarm_hour_input,
+        self.alarm_minute_input,
+        self.alarm_end_hour_input,
+        self.alarm_end_minute_input,
+        self.add_alarm_button,
+        self.alarms_view
+        )
+        # Iniciar el hilo para verificar las alarmas
         alarm_checker_thread = threading.Thread(target=self.check_alarms, daemon=True)
         alarm_checker_thread.start()
-        if self.alarm_triggered:
-            # Aquí asumimos que tienes una manera de obtener el nombre y la duración de la tarea activada por la alarma
-            task_name = "Nombre de la tarea de la alarma"
-            task_duration = 1  # Duración en horas, por ejemplo
-            self.start_pomodoro(task_name, task_duration, self.timer_label, self.status_label, self.start_button)
-            self.alarm_triggered = False
+
 
 
 def main(page: ft.Page):
@@ -176,4 +216,3 @@ def main(page: ft.Page):
     app.run()
 
 ft.app(target=main)
-
