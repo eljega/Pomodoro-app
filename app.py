@@ -15,47 +15,79 @@ def generate_time_options(interval=5):
 class PomodoroApp:
     def __init__(self, page):
         self.page = page
+
+        # Establecer estilo general de la página
+        self.page.update()  # Actualizar la página para aplicar estilos
+
         self.alarms = []  # Lista para almacenar las alarmas
         self.is_timer_running = False
+        self.alarm_triggered = False
+        self.alarms_view = ft.Column()
+
+        # Establecer colores base
+        base_color = "#16213E"
+        text_color = "#F8F9F9"
+        button_color = "#0F3460"
+        input_bg_color = "#2E4053"
+
+        # Configurar los controles
         self.task_name_input = ft.TextField(label="Nombre de la Tarea", width=300)
-        # Crear las opciones para el Dropdown de duración de la tarea
+        self.task_name_input.bgcolor = input_bg_color
+        self.task_name_input.color = text_color
+        
+
+        self.task_duration_input = self.create_duration_dropdown()
+
+        self.timer_label = ft.Text(value="", size=30, color=text_color)
+        self.status_label = ft.Text(value="", size=20, color=text_color)
+
+        self.start_button = ft.ElevatedButton("Iniciar", on_click=self.on_start_button_click)
+        self.start_button.bgcolor = button_color
+        self.start_button.color = text_color
+
+        self.alarm_title_input = ft.TextField(label="Título de la Alarma", width=300)
+        self.alarm_title_input.bgcolor = input_bg_color
+        self.alarm_title_input.color = text_color
+
+        self.alarm_start_time_input, self.alarm_end_time_input = self.create_time_dropdowns()
+
+        self.add_alarm_button = ft.ElevatedButton("Agregar Alarma", on_click=self.on_add_alarm_button_click)
+        self.add_alarm_button.bgcolor = button_color
+        self.add_alarm_button.color = text_color
+
+        
+
+    def create_duration_dropdown(self):
         duration_options = [
             "1 hr", "1 hr 30 min", "2 hr", "2 hr 30 min", "3 hr",
             # ... más opciones según sea necesario ...
         ]
-
-        self.task_duration_input = ft.Dropdown(
+        dropdown = ft.Dropdown(
             options=[ft.dropdown.Option(text=option) for option in duration_options],
             label="Duración de la Tarea",
             width=150
         )
+        dropdown.bgcolor = "#1A1A2E"
+        dropdown.color = "#E5E5E5"
+        return dropdown
 
-        self.timer_label = ft.Text(value="", size=30)
-        self.status_label = ft.Text(value="", size=20)
-        self.start_button = ft.ElevatedButton("Iniciar", on_click=self.on_start_button_click)
-        self.alarm_triggered = False
-        self.alarms_view = ft.Column()
-
-        self.alarm_title_input = ft.TextField(label="Título de la Alarma", width=300)
-        # Crear las opciones para los Dropdowns de hora de inicio y finalización
+    def create_time_dropdowns(self):
         time_options = generate_time_options()
-
-        # Inicializar los Dropdowns con las opciones combinadas
-        self.alarm_start_time_input = ft.Dropdown(
+        start_dropdown = ft.Dropdown(
             options=[ft.dropdown.Option(text=option) for option in time_options],
             label="Hora de inicio",
             width=150
         )
-        self.alarm_end_time_input = ft.Dropdown(
+        end_dropdown = ft.Dropdown(
             options=[ft.dropdown.Option(text=option) for option in time_options],
             label="Hora de finalización",
             width=150
         )
-        self.add_alarm_button = ft.ElevatedButton(
-            text="Agregar Alarma",
-            on_click=self.on_add_alarm_button_click  # Asegúrate de que este método esté definido
-        )
-
+        start_dropdown.bgcolor = "#1A1A2E"
+        start_dropdown.color = "#E5E5E5"
+        end_dropdown.bgcolor = "#1A1A2E"
+        end_dropdown.color = "#E5E5E5"
+        return start_dropdown, end_dropdown
 
     def play_sound(self, file_path):
         playsound(file_path)
@@ -129,7 +161,6 @@ class PomodoroApp:
         start_button.update()
         self.alarm_triggered = False
 
-
         # En tu función que maneja el evento del botón de inicio
     def on_start_button_click(self, e):
         task_name = self.task_name_input.value
@@ -163,9 +194,6 @@ class PomodoroApp:
                         self.alarm_triggered = True
                         self.start_pomodoro(title, duration, self.timer_label, self.status_label, self.start_button)
             time.sleep(30)
-
-
-
     
     def start_pomodoro(self, task_name, task_duration, timer_label, status_label, start_button):
         if self.is_timer_running or task_duration <= 0:
@@ -178,7 +206,6 @@ class PomodoroApp:
         start_button.update()
 
         threading.Thread(target=self.pomodoro_timer, args=(task_name, task_duration, timer_label, status_label, start_button)).start()
-
 
     def add_alarm(self, title, start_time_str, end_time_str):
         now = datetime.now().time()  # Obtener solo la hora actual
@@ -214,7 +241,6 @@ class PomodoroApp:
         self.alarms.append((title, start_time, end_time, duration_hours))
         self.display_alarms()
 
-
     def on_add_alarm_button_click(self, event):
         # Obtener el valor seleccionado de los Dropdowns para la hora de inicio y finalización
         start_time_str = self.alarm_start_time_input.value
@@ -225,7 +251,6 @@ class PomodoroApp:
 
         # Llamar a la función para agregar la alarma con los valores obtenidos
         self.add_alarm(alarm_title, start_time_str, end_time_str)
-
 
     def run(self):
         try:
@@ -248,9 +273,6 @@ class PomodoroApp:
         # Inicia el hilo para verificar las alarmas
         alarm_checker_thread = threading.Thread(target=self.check_alarms, daemon=True)
         alarm_checker_thread.start()
-
-
-
 
 def main(page: ft.Page):
     app = PomodoroApp(page)
