@@ -5,6 +5,12 @@ import time
 from playsound import playsound
 
 is_timer_running = False
+def generate_time_options(interval=5):
+    options = []
+    for hour in range(24):
+        for minute in range(0, 60, interval):
+            options.append(f"{hour:02d}:{minute:02d}")
+    return options
 
 class PomodoroApp:
     def __init__(self, page):
@@ -20,16 +26,24 @@ class PomodoroApp:
         self.alarms_view = ft.Column()
 
         self.alarm_title_input = ft.TextField(label="Título de la Alarma", width=300)
-            # Crear las opciones para el Dropdown de hora
-        hour_options = [ft.dropdown.Option(f"{i:02d}") for i in range(24)]
-        self.alarm_hour_input = ft.Dropdown(options=hour_options, label="Hora de inicio", width=100)
-        # Crear las opciones para el Dropdown de minutos
-        minute_options = [ft.dropdown.Option(f"{i:02d}") for i in range(60)]
-        self.alarm_minute_input = ft.Dropdown(options=minute_options, label="Minutos de inicio", width=100)
-        # Similar para alarm_end_hour_input y alarm_end_minute_input
-        self.alarm_end_hour_input = ft.Dropdown(options=hour_options, label="Hora de finalización", width=100)
-        self.alarm_end_minute_input = ft.Dropdown(options=minute_options, label="Minutos de finalización", width=100)
-        self.add_alarm_button = ft.ElevatedButton("Agregar Alarma", on_click=self.on_add_alarm_button_click)
+        # Crear las opciones para los Dropdowns de hora de inicio y finalización
+        time_options = generate_time_options()
+
+        # Inicializar los Dropdowns con las opciones combinadas
+        self.alarm_start_time_input = ft.Dropdown(
+            options=[ft.dropdown.Option(text=option) for option in time_options],
+            label="Hora de inicio",
+            width=150
+        )
+        self.alarm_end_time_input = ft.Dropdown(
+            options=[ft.dropdown.Option(text=option) for option in time_options],
+            label="Hora de finalización",
+            width=150
+        )
+        self.add_alarm_button = ft.ElevatedButton(
+            text="Agregar Alarma",
+            on_click=self.on_add_alarm_button_click  # Asegúrate de que este método esté definido
+        )
 
 
     def play_sound(self, file_path):
@@ -181,33 +195,39 @@ class PomodoroApp:
 
 
     def on_add_alarm_button_click(self, event):
-            # Obtener los valores de los controles de entrada de la alarma
-            title = self.alarm_title_input.value
-            start_time_str = f"{self.alarm_hour_input.value}:{self.alarm_minute_input.value}"
-            end_time_str = f"{self.alarm_end_hour_input.value}:{self.alarm_end_minute_input.value}"
+        # Obtener el valor seleccionado de los Dropdowns para la hora de inicio y finalización
+        start_time_str = self.alarm_start_time_input.value
+        end_time_str = self.alarm_end_time_input.value
 
-            # Llamar a la función add_alarm con los valores obtenidos
-            self.add_alarm(title, start_time_str, end_time_str)
+        # Obtener el título de la alarma del campo de texto
+        alarm_title = self.alarm_title_input.value
+
+        # Llamar a la función para agregar la alarma con los valores obtenidos
+        self.add_alarm(alarm_title, start_time_str, end_time_str)
+
 
     def run(self):
-        # No necesitamos redefinir los controles aquí porque ya los definimos en __init__
-        self.page.add(
-        self.task_name_input,
-        self.task_duration_input,
-        self.start_button,
-        self.timer_label,
-        self.status_label,
-        self.alarm_title_input,
-        self.alarm_hour_input,
-        self.alarm_minute_input,
-        self.alarm_end_hour_input,
-        self.alarm_end_minute_input,
-        self.add_alarm_button,
-        self.alarms_view
-        )
-        # Iniciar el hilo para verificar las alarmas
+        try:
+            # Añade los controles uno por uno directamente a la página
+            self.page.add(self.task_name_input)
+            self.page.add(self.task_duration_input)
+            self.page.add(self.start_button)
+            self.page.add(self.timer_label)
+            self.page.add(self.status_label)
+            self.page.add(self.alarm_title_input)
+            self.page.add(self.alarm_start_time_input)
+            self.page.add(self.alarm_end_time_input)
+            self.page.add(self.add_alarm_button)
+            self.page.add(self.alarms_view)
+            print("Todos los controles se han agregado a la página")
+
+        except Exception as e:
+            print(f"Error al agregar controles a la página: {e}")
+
+        # Inicia el hilo para verificar las alarmas
         alarm_checker_thread = threading.Thread(target=self.check_alarms, daemon=True)
         alarm_checker_thread.start()
+
 
 
 
