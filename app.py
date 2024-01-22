@@ -18,7 +18,18 @@ class PomodoroApp:
         self.alarms = []  # Lista para almacenar las alarmas
         self.is_timer_running = False
         self.task_name_input = ft.TextField(label="Nombre de la Tarea", width=300)
-        self.task_duration_input = ft.TextField(label="Duración de la Tarea (HH:MM o decimal)", width=300)
+        # Crear las opciones para el Dropdown de duración de la tarea
+        duration_options = [
+            "1 hr", "1 hr 30 min", "2 hr", "2 hr 30 min", "3 hr",
+            # ... más opciones según sea necesario ...
+        ]
+
+        self.task_duration_input = ft.Dropdown(
+            options=[ft.dropdown.Option(text=option) for option in duration_options],
+            label="Duración de la Tarea",
+            width=150
+        )
+
         self.timer_label = ft.Text(value="", size=30)
         self.status_label = ft.Text(value="", size=20)
         self.start_button = ft.ElevatedButton("Iniciar", on_click=self.on_start_button_click)
@@ -121,15 +132,25 @@ class PomodoroApp:
 
         # En tu función que maneja el evento del botón de inicio
     def on_start_button_click(self, e):
-        task_name = self.task_name_input.value  # Asegúrate de que task_name_input sea accesible en tu clase
-        task_duration_str = self.task_duration_input.value  # Lo mismo para task_duration_input
-        task_duration = self.convert_duration_to_hours(task_duration_str)
+        task_name = self.task_name_input.value
+        task_duration_str = self.task_duration_input.value  # Ahora es el valor seleccionado del Dropdown
+
+        # Convertir la duración seleccionada a horas
+        task_duration = self.convert_duration_selection_to_hours(task_duration_str)
+
         if task_duration is not None:
             self.start_pomodoro(task_name, task_duration, self.timer_label, self.status_label, self.start_button)
         else:
-            # Mostrar error de duración no válida
             print("Duración no válida")
 
+    def convert_duration_selection_to_hours(self, duration_str):
+        # Convierte la selección de duración (p. ej., "1 hr 30 min") a un valor decimal en horas
+        parts = duration_str.split()
+        if len(parts) == 2:  # p. ej., "30 min"
+            return float(parts[0]) / 60
+        elif len(parts) == 4:  # p. ej., "1 hr 30 min"
+            return float(parts[0]) + (float(parts[2]) / 60)
+        return None
 
     def check_alarms(self):
         while True:
