@@ -15,7 +15,7 @@ def generate_time_options(interval=5):
 class PomodoroApp:
     def __init__(self, page):
         self.page = page
-
+        
         # Establecer estilo general de la página
         self.page.update()  # Actualizar la página para aplicar estilos
 
@@ -27,13 +27,16 @@ class PomodoroApp:
         # Establecer colores base
         base_color = "#16213E"
         text_color = "#F8F9F9"
+        text_color_tittle = "#FDFEFE"
         button_color = "#0F3460"
         input_bg_color = "#2E4053"
+        
+        self.page.bgcolor = "#000033"
 
         # Configurar los controles
-        self.task_name_input = ft.TextField(label="Nombre de la Tarea", width=300)
+        self.task_name_input = ft.TextField(label="Nombre de la Tarea", width=300, color=text_color_tittle )
         self.task_name_input.bgcolor = input_bg_color
-        self.task_name_input.color = text_color
+        self.task_name_input.color = text_color_tittle
         
 
         self.task_duration_input = self.create_duration_dropdown()
@@ -69,6 +72,7 @@ class PomodoroApp:
         )
         dropdown.bgcolor = "#1A1A2E"
         dropdown.color = "#E5E5E5"
+        
         return dropdown
 
     def create_time_dropdowns(self):
